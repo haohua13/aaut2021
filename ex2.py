@@ -17,8 +17,9 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split   
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.ensemble import RandomForestRegressor 
-from sklearn.model_selection import KFold
-from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import make_pipeline 
+from sklearn.model_selection import cross_validate
 
 xtrain = np.load('Xtrain_Regression_Part2.npy') # loads the data set x
 ytrain = np.load('Ytrain_Regression_Part2.npy') # loads the data set y
@@ -59,44 +60,73 @@ remove = outlier != -1
 xtrain, ytrain = xtrain[remove,:], ytrain[remove]
 print(xtrain.shape,ytrain.shape) # data set shape with outliers removed
 '''
-# split train/test
-x_train, x_test, y_train, y_test = train_test_split(xtrain, ytrain, test_size=0.3, random_state=0 )
-'''Different Regression Models'''
+# simple split into train and test sets (80% and 20%)
+x_train, x_test, y_train, y_test=train_test_split(xtrain, ytrain, test_size=0.2, random_state=0)
+
+# regression models: linear and polynomial
 reg=LinearRegression()
-model1=reg.fit(x_train,y_train)
-model2=GradientBoostingRegressor(random_state=0).fit(x_train, np.ravel(y_train))
-model3=RandomForestRegressor(random_state=0).fit(x_train,np.ravel(y_train))
+poli=make_pipeline(PolynomialFeatures(2),LinearRegression(fit_intercept=False))
 
-R=model1.score(x_train,y_train)
-R2=model2.score(x_train,y_train)
-R3=model3.score(x_train,y_train)
-B0=reg.intercept_
-B1=reg.coef_
+# cross-validation on the training set by applying k-fold method, cv=k
+scoring="neg_mean_squared_error" # mean squared error
+linscore=cross_validate(reg, x_train, y_train, scoring=scoring, return_estimator=True, cv=10)
+poliscore=cross_validate(poli, x_train, y_train, scoring=scoring, return_estimator=True, cv=10)
 
-print('coefficient of determination R^2:', R, R2, R3)
-print('coefficient of determination R^2(estimation):', model1.score(x_test,y_test), model2.score(x_test,y_test), model3.score(x_test,y_test))
+# evaluate linear and polynomial model. test_score has the mean_squared_error in each run (k=10)
+mse_reg=linscore["test_score"].mean()
+mse_poli=poliscore["test_score"].mean()
+print('mean MSE Linear:%.4f' % mse_reg)
+print('mean MSE Polynomial:%.4f' % mse_poli)
+
+# fits the linear model Y^=B0+B1*x with the given training set
+reg.fit(x_train, y_train)
+
+y_predicted_1=reg.predict(x_test) # evaluation of the predictor using the test set splitted from the data set
+
+mae=mean_absolute_error(y_test, y_predicted_1) # average error
+mse=mean_squared_error(y_test, y_predicted_1) # focuses on larger errors
+R=reg.score(x_train,y_train) # coefficient of determination 
+B0=reg.intercept_ # slope of the linear model
+B1=reg.coef_ # vector with the B1 corresponding to each feature of x
+
+print('coefficient of determination R^2:', R)
+print('coefficient of determination R^2 (estimation):', reg.score(x_test,y_test))
 print('Bo:', B0)
 print('B1:', B1)
+print('Test set MAE:%.4f' % mae)
+print('Test set MSE:%.4f' % mse)
 
-y_predicted1=reg.predict(x_test)
-mse=mean_squared_error(y_test,y_predicted1)
-print('MSE (linear regression): %.3f' % mse)
+'''Load Xtest, fit the model using the whole training set, predict y outcomes and save to a .npy file'''
 
-xtest=np.load('Xtest_Regression_Part2.npy') # loads the independent test set
-y_predicted=reg.predict(xtest) # evaluates the predictor
-np.save('Ypredict_Regression_Part2.npy',y_predicted) # saves the y^ values into a .npy file
+xtest=np.load('Xtest_Regression_Part1.npy') # loads the independent test set
+reg.fit(xtrain,ytrain) # trains the linear model with the given training set
+y_predicted=reg.predict(xtest) # evaluation of the predictor using the independent test set (corresponding outcomes for professor)
+np.save('Ypredict_Regression_Part1.npy',y_predicted) # saves the predicted y^ values into a .npy file
 
-'''
-Plotting with scatter
-first plot uses the output y as a function of the 1st feature of our data input x.
-second plot uses the output y as a function of the input index, i.
-third plot is to check outliers, by plotting specific features of x.
-'''
+'''Plotting figures '''
 
-'''
+# train y as a function of the 1st feature of our data input x, with its estimated linear regression
 plt.scatter(xtrain[:,1],ytrain, color='blue', linewidth=1)
+plt.xlabel('Xtrain feature[1]')
+plt.ylabel('Ytrain')
+plt.grid()
+x=np.linspace(min(xtrain[:,1])-1, 1+max(xtrain[:,1]), 100)
+y=B0*x+B1[:,1]
+plt.plot(x, y, '-r', label='y=B0+B1*x', linewidth=3)
+plt.legend(loc='lower left')
 plt.figure()
-plt.scatter(range(len(xtest)), y_predicted, color='green', linewidth=1)
+
+# predicted y^ as a function of the input index i.
+plt.scatter(range(len(xtest)), y_predicted, color='green', linewidth=0.1)
+plt.xlabel('Index Position of Xtest')
+plt.ylabel('Y^ (estimation)')
+plt.grid()
 plt.figure()
-plt.scatter(xtrain[:,1], xtrain[:,2], color='red', linewidth=1)
-plt.show()'''
+
+# 1st feature of input x in function of its respective index
+plt.scatter(range(len(xtrain)), xtrain[:,1], color='red', linewidth=1)
+plt.xlabel('Index Position of Xtrain')
+plt.ylabel('Xtrain feature[1]')
+plt.grid()
+plt.figure()
+

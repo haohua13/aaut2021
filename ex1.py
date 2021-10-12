@@ -3,60 +3,93 @@
 Created on Fri Oct  1 17:23:08 2021
 
 @author: haohua
+
+First Part - Regression 
 """
 
 import numpy as np
 from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
+from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import train_test_split  
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
-reg=LinearRegression()
+from sklearn.model_selection import cross_validate
 
+# loads the .npy files that cointains the data set provided for the problem
 xtrain=np.load('Xtrain_Regression_Part1.npy')
 ytrain=np.load('Ytrain_Regression_Part1.npy')
 
-# split into train and test sets (70% and 30%)
-x_train, x_test, y_train, y_test=train_test_split(xtrain, ytrain, test_size=0.3, random_state=1)
+'''Validation of the predictor'''
 
-reg.fit(xtrain,ytrain) # fits the model with the given training set
+# simple split into train and test sets (80% and 20%)
+x_train, x_test, y_train, y_test=train_test_split(xtrain, ytrain, test_size=0.2, random_state=0)
 
-xtest=np.load('Xtest_Regression_Part1.npy') # loads the independent test set
-y_predicted=reg.predict(xtest) # evaluation of the predictor using the test set 
+# regression models: linear and polynomial
+reg=LinearRegression()
+poli=make_pipeline(PolynomialFeatures(2),LinearRegression(fit_intercept=False))
+
+# cross-validation on the training set by applying k-fold method, cv=k
+scoring="neg_mean_squared_error" # mean squared error
+linscore=cross_validate(reg, x_train, y_train, scoring=scoring, return_estimator=True, cv=10)
+poliscore=cross_validate(poli, x_train, y_train, scoring=scoring, return_estimator=True, cv=10)
+
+# evaluate linear and polynomial model. test_score has the mean_squared_error in each run (k=10)
+mse_reg=linscore["test_score"].mean()
+mse_poli=poliscore["test_score"].mean()
+print('mean MSE Linear:%.4f' % mse_reg)
+print('mean MSE Polynomial:%.4f' % mse_poli)
+
+# fits the linear model Y^=B0+B1*x with the given training set
+reg.fit(x_train, y_train)
+
 y_predicted_1=reg.predict(x_test) # evaluation of the predictor using the test set splitted from the data set
-
 
 mae=mean_absolute_error(y_test, y_predicted_1) # average error
 mse=mean_squared_error(y_test, y_predicted_1) # focuses on larger errors
-R=reg.score(xtrain,ytrain)
-B0=reg.intercept_
-B1=reg.coef_
+R=reg.score(x_train,y_train) # coefficient of determination 
+B0=reg.intercept_ # slope of the linear model
+B1=reg.coef_ # vector with the B1 corresponding to each feature of x
 
 print('coefficient of determination R^2:', R)
 print('coefficient of determination R^2 (estimation):', reg.score(x_test,y_test))
 print('Bo:', B0)
 print('B1:', B1)
-print('MAE:%.3f' % mae)
-print('MSE:%.3f' % mse)
+print('Test set MAE:%.4f' % mae)
+print('Test set MSE:%.4f' % mse)
 
+'''Load Xtest, fit the model using the whole training set, predict y outcomes and save to a .npy file'''
 
+xtest=np.load('Xtest_Regression_Part1.npy') # loads the independent test set
+reg.fit(xtrain,ytrain) # trains the linear model with the given training set
+y_predicted=reg.predict(xtest) # evaluation of the predictor using the independent test set (corresponding outcomes for professor)
 np.save('Ypredict_Regression_Part1.npy',y_predicted) # saves the predicted y^ values into a .npy file
 
-'''Plotting with scatter. 
-first plot uses the output y as a function of the 1st feature of our data input x.
-third plot uses the output y as a function of the input index, i. training
-third plot uses the output y as a function of the input index, i. prediction
-'''
+'''Plotting figures '''
 
+# train y as a function of the 1st feature of our data input x, with its estimated linear regression
 plt.scatter(xtrain[:,1],ytrain, color='blue', linewidth=1)
 plt.xlabel('Xtrain feature[1]')
 plt.ylabel('Ytrain')
+plt.grid()
+x=np.linspace(min(xtrain[:,1])-1, 1+max(xtrain[:,1]), 100)
+y=B0*x+B1[:,1]
+plt.plot(x, y, '-r', label='y=B0+B1*x', linewidth=3)
+plt.legend(loc='lower left')
 plt.figure()
-plt.scatter(range(len(xtrain)),ytrain, color='red', linewidth=1)
-plt.figure()
-plt.xlabel('Index Position')
-plt.ylabel('Xtest')
-plt.scatter(range(len(xtest)), y_predicted, color='green', linewidth=1)
-plt.xlabel('Index Position')
+
+# predicted y^ as a function of the input index i.
+plt.scatter(range(len(xtest)), y_predicted, color='green', linewidth=0.1)
+plt.xlabel('Index Position of Xtest')
 plt.ylabel('Y^ (estimation)')
-plt.show()
+plt.grid()
+plt.figure()
+
+# 1st feature of input x in function of its respective index
+plt.scatter(range(len(xtrain)), xtrain[:,1], color='red', linewidth=1)
+plt.xlabel('Index Position of Xtrain')
+plt.ylabel('Xtrain feature[1]')
+plt.grid()
+plt.figure()
+
