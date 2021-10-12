@@ -21,8 +21,9 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline 
 from sklearn.model_selection import cross_validate
 
-xtrain = np.load('Xtrain_Regression_Part2.npy') # loads the data set x
-ytrain = np.load('Ytrain_Regression_Part2.npy') # loads the data set y
+# loads the .npy files that cointains the data set provided for the problem
+xtrain=np.load('Xtrain_Regression_Part2.npy')
+ytrain=np.load('Ytrain_Regression_Part2.npy')
 
 '''Isolation Forest: tree-based outlier detection algorithm'''
 '''
@@ -60,12 +61,16 @@ remove = outlier != -1
 xtrain, ytrain = xtrain[remove,:], ytrain[remove]
 print(xtrain.shape,ytrain.shape) # data set shape with outliers removed
 '''
+
+
+'''Validation of the predictor'''
+
 # simple split into train and test sets (80% and 20%)
 x_train, x_test, y_train, y_test=train_test_split(xtrain, ytrain, test_size=0.2, random_state=0)
 
 # regression models: linear and polynomial
 reg=LinearRegression()
-poli=make_pipeline(PolynomialFeatures(2),LinearRegression(fit_intercept=False))
+poli=make_pipeline(PolynomialFeatures(2),LinearRegression(fit_intercept=False)) # pipeline so we can see values simultaneously
 
 # cross-validation on the training set by applying k-fold method, cv=k
 scoring="neg_mean_squared_error" # mean squared error
@@ -73,17 +78,17 @@ linscore=cross_validate(reg, x_train, y_train, scoring=scoring, return_estimator
 poliscore=cross_validate(poli, x_train, y_train, scoring=scoring, return_estimator=True, cv=10)
 
 # evaluate linear and polynomial model. test_score has the mean_squared_error in each run (k=10)
-mse_reg=linscore["test_score"].mean()
-mse_poli=poliscore["test_score"].mean()
+mse_reg=abs(np.average(linscore["test_score"]))
+mse_poli=abs(np.average(poliscore["test_score"]))
 print('mean MSE Linear:%.4f' % mse_reg)
 print('mean MSE Polynomial:%.4f' % mse_poli)
+print('maximum MSE from Linear:%.4f' % abs(np.min(linscore["test_score"])))
+print('maximum MSE from Polynomial:%.4f' % abs(np.min(poliscore["test_score"])))
 
-# fits the linear model Y^=B0+B1*x with the given training set
+# fits the linear model Y^=B0+B1*x with the 70% training set
 reg.fit(x_train, y_train)
 
 y_predicted_1=reg.predict(x_test) # evaluation of the predictor using the test set splitted from the data set
-
-mae=mean_absolute_error(y_test, y_predicted_1) # average error
 mse=mean_squared_error(y_test, y_predicted_1) # focuses on larger errors
 R=reg.score(x_train,y_train) # coefficient of determination 
 B0=reg.intercept_ # slope of the linear model
@@ -91,9 +96,6 @@ B1=reg.coef_ # vector with the B1 corresponding to each feature of x
 
 print('coefficient of determination R^2:', R)
 print('coefficient of determination R^2 (estimation):', reg.score(x_test,y_test))
-print('Bo:', B0)
-print('B1:', B1)
-print('Test set MAE:%.4f' % mae)
 print('Test set MSE:%.4f' % mse)
 
 '''Load Xtest, fit the model using the whole training set, predict y outcomes and save to a .npy file'''
@@ -103,9 +105,10 @@ reg.fit(xtrain,ytrain) # trains the linear model with the given training set
 y_predicted=reg.predict(xtest) # evaluation of the predictor using the independent test set (corresponding outcomes for professor)
 np.save('Ypredict_Regression_Part1.npy',y_predicted) # saves the predicted y^ values into a .npy file
 
+
 '''Plotting figures '''
 
-# train y as a function of the 1st feature of our data input x, with its estimated linear regression
+# trainy as a function of the 1st feature of our data input x, with its estimated linear regression
 plt.scatter(xtrain[:,1],ytrain, color='blue', linewidth=1)
 plt.xlabel('Xtrain feature[1]')
 plt.ylabel('Ytrain')
@@ -129,4 +132,3 @@ plt.xlabel('Index Position of Xtrain')
 plt.ylabel('Xtrain feature[1]')
 plt.grid()
 plt.figure()
-

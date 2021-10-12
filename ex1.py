@@ -13,7 +13,6 @@ from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
 from sklearn.pipeline import make_pipeline
 from sklearn.model_selection import train_test_split  
-from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import cross_validate
 
@@ -28,25 +27,25 @@ x_train, x_test, y_train, y_test=train_test_split(xtrain, ytrain, test_size=0.2,
 
 # regression models: linear and polynomial
 reg=LinearRegression()
-poli=make_pipeline(PolynomialFeatures(2),LinearRegression(fit_intercept=False))
+poli=make_pipeline(PolynomialFeatures(2),LinearRegression(fit_intercept=False)) # pipeline so we can see values simultaneously
 
 # cross-validation on the training set by applying k-fold method, cv=k
 scoring="neg_mean_squared_error" # mean squared error
-linscore=cross_validate(reg, x_train, y_train, scoring=scoring, return_estimator=True, cv=10)
-poliscore=cross_validate(poli, x_train, y_train, scoring=scoring, return_estimator=True, cv=10)
+linscore=cross_validate(reg, xtrain, ytrain, scoring=scoring, return_estimator=True, cv=15)
+poliscore=cross_validate(poli, xtrain, ytrain, scoring=scoring, return_estimator=True, cv=15)
 
 # evaluate linear and polynomial model. test_score has the mean_squared_error in each run (k=10)
-mse_reg=linscore["test_score"].mean()
-mse_poli=poliscore["test_score"].mean()
+mse_reg=abs(np.average(linscore["test_score"]))
+mse_poli=abs(np.average(poliscore["test_score"]))
 print('mean MSE Linear:%.4f' % mse_reg)
 print('mean MSE Polynomial:%.4f' % mse_poli)
+print('maximum MSE from Linear:%.4f' % abs(np.min(linscore["test_score"])))
+print('maximum MSE from Polynomial:%.4f' % abs(np.min(poliscore["test_score"])))
 
-# fits the linear model Y^=B0+B1*x with the given training set
+# fits the linear model Y^=B0+B1*x with the 70% training set
 reg.fit(x_train, y_train)
 
 y_predicted_1=reg.predict(x_test) # evaluation of the predictor using the test set splitted from the data set
-
-mae=mean_absolute_error(y_test, y_predicted_1) # average error
 mse=mean_squared_error(y_test, y_predicted_1) # focuses on larger errors
 R=reg.score(x_train,y_train) # coefficient of determination 
 B0=reg.intercept_ # slope of the linear model
@@ -56,7 +55,6 @@ print('coefficient of determination R^2:', R)
 print('coefficient of determination R^2 (estimation):', reg.score(x_test,y_test))
 print('Bo:', B0)
 print('B1:', B1)
-print('Test set MAE:%.4f' % mae)
 print('Test set MSE:%.4f' % mse)
 
 '''Load Xtest, fit the model using the whole training set, predict y outcomes and save to a .npy file'''
@@ -66,9 +64,10 @@ reg.fit(xtrain,ytrain) # trains the linear model with the given training set
 y_predicted=reg.predict(xtest) # evaluation of the predictor using the independent test set (corresponding outcomes for professor)
 np.save('Ypredict_Regression_Part1.npy',y_predicted) # saves the predicted y^ values into a .npy file
 
+
 '''Plotting figures '''
 
-# train y as a function of the 1st feature of our data input x, with its estimated linear regression
+# trainy as a function of the 1st feature of our data input x, with its estimated linear regression
 plt.scatter(xtrain[:,1],ytrain, color='blue', linewidth=1)
 plt.xlabel('Xtrain feature[1]')
 plt.ylabel('Ytrain')
