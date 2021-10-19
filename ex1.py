@@ -30,18 +30,18 @@ x_train, x_test, y_train, y_test=train_test_split(xtrain, ytrain, test_size=0.2,
 # For loop to find the best alpha for LASSO Regression
 error=5
 best_alpha=0
-for i in range(100, 1, -5):
-    las=Lasso(alpha=i/10000)
+for i in range(1000, 1, -1):
+    las=Lasso(alpha=i/100000)
     lasscore=cross_validate(las, xtrain, ytrain, scoring="neg_mean_squared_error", return_estimator=True, cv=10)
     mse_las=abs(np.average(lasscore["test_score"]))
     if mse_las<error:
         error=mse_las
-        best_alpha=i/10000
+        best_alpha=i/100000
         
 # For loop to find the best alpha for Ridge Regression       
 error1=5
 best_alpha1=0
-for i in range(100, 1, -5):
+for i in range(100, 1, -1):
     ridge=Ridge(alpha=i/10000)
     ridgescore=cross_validate(ridge, xtrain, ytrain, scoring="neg_mean_squared_error", return_estimator=True, cv=10)
     mse_ridge=abs(np.average(ridgescore["test_score"]))
@@ -91,10 +91,10 @@ print('Bo:', B0)
 print('B1:', B1)
 print('Test set MSE:%.4f' % mse)
 
-'''Load Xtest, fit the Linear Regression model using the whole training set, predict y outcomes and save to a .npy file'''
+'''Load Xtest, fit the LASSO Regression model using the whole training set, predict y outcomes and save to a .npy file'''
 
 xtest=np.load('Xtest_Regression_Part1.npy') # loads the independent test set
-reg.fit(xtrain,ytrain) # trains the linear model with the given training set
+las.fit(xtrain,ytrain) # trains the linear model with the given training set
 y_predicted=reg.predict(xtest) # evaluation of the predictor using the independent test set (corresponding outcomes for professor)
 np.save('Ypredict_Regression_Part1.npy',y_predicted) # saves the predicted y^ values into a .npy file
 
@@ -102,19 +102,19 @@ np.save('Ypredict_Regression_Part1.npy',y_predicted) # saves the predicted y^ va
 '''Plotting figures '''
 
 # trainy as a function of the 1st feature of our data input x, with its estimated linear regression
-plt.scatter(xtrain[:,1],ytrain, color='blue', linewidth=1)
+plt.scatter(xtrain[:,1],ytrain, color='tab:red')
 plt.xlabel('Xtrain feature[1]')
 plt.ylabel('Ytrain')
 plt.grid()
 plt.title('Ytrain in function of Xtrain[1]')
 x=np.linspace(min(xtrain[:,1])-1, 1+max(xtrain[:,1]), 100)
 y=B0*x+B1[:,1]
-plt.plot(x, y, '-r', label='y=B0+B1*x', linewidth=3)
+plt.plot(x, y, 'tab:blue', label='y=B0+B1*x', linewidth=3)
 plt.legend(loc='lower left')
 plt.figure()
 
 # predicted y^ as a function of the input index i.
-plt.scatter(range(len(xtest)), y_predicted, color='green', linewidth=0.1)
+plt.scatter(range(len(xtest)), y_predicted, color='tab:blue',s=10)
 plt.xlabel('Index Position of Xtest')
 plt.title('Ytest in function of the index of Xtest')
 plt.ylabel('Y^ (estimation)')
@@ -122,7 +122,7 @@ plt.grid()
 plt.figure()
 
 # 1st feature of input x in function of its respective index
-plt.scatter(range(len(xtrain)), xtrain[:,1], color='red', linewidth=1)
+plt.scatter(range(len(xtrain)), xtrain[:,1], color='tab:green')
 plt.xlabel('Index Position of Xtrain')
 plt.ylabel('Xtrain feature[1]')
 plt.title('xtrain[1] in function of its index position')
