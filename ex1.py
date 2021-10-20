@@ -79,17 +79,11 @@ print('maximum MSE from Ridge:%.4f' % abs(np.min(ridgescore["test_score"])))
 # fits the linear model (Linear Regression) Y^=B0+B1*x with the 80% training set
 reg.fit(x_train, y_train)
 
-y_predicted_1=reg.predict(x_test) # evaluation of the predictor using the test set splitted from the data set
+y_predicted_1=las.predict(x_test) # evaluation of the predictor using the test set splitted from the data set
 mse=mean_squared_error(y_test, y_predicted_1) # focuses on larger errors
 R=reg.score(x_train,y_train) # coefficient of determination 
 B0=reg.intercept_ # slope of the linear model
 B1=reg.coef_ # vector with the B1 corresponding to each feature of x
-
-print('coefficient of determination R^2:', R)
-print('coefficient of determination R^2 (estimation):', reg.score(x_test,y_test))
-print('Bo:', B0)
-print('B1:', B1)
-print('Test set MSE:%.4f' % mse)
 
 '''Load Xtest, fit the LASSO Regression model using the whole training set, predict y outcomes and save to a .npy file'''
 
