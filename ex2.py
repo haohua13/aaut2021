@@ -41,7 +41,13 @@ ytrain = np.load('./Ytrain_Regression_Part2.npy')
 # xtrain = np.delete(xtrain, indexArray, 0)
 # ytrain = np.delete(ytrain, indexArray, 0)
 
-
+# ytrain in function of its respective index
+plt.scatter(range(len(ytrain)), ytrain)
+plt.title('Ytrain')
+plt.xlabel('Index of ytrain')
+plt.ylabel('Ytrain')
+plt.grid()
+plt.figure()
 
 '''Outlier Detection and Removal'''
 '''Isolation Forest: tree-based outlier detection algorithm'''
@@ -63,15 +69,6 @@ ytrain = np.load('./Ytrain_Regression_Part2.npy')
 
 
 '''Unsupervised outlier detection using Local Outlier Factor (LOF)'''
-
-# ytrain in function of its respective index
-plt.scatter(range(len(ytrain)), ytrain)
-plt.title('Ytrain')
-plt.xlabel('Index of ytrain')
-plt.ylabel('Ytrain')
-plt.grid()
-plt.figure()
-
 lof = LocalOutlierFactor(n_neighbors=20, contamination=0.09)
 outlier = lof.fit_predict(ytrain)
 remove = outlier != -1
@@ -86,12 +83,38 @@ plt.ylabel('Ytrain after removing 9 outliers')
 plt.grid()
 
 
+'''Feature Selection algorithm for our training set-eliminates insignificant features using Linear Regression'''
+
+temp=np.empty((91,1)) # saves the current feature to test
+index_saver=np.empty((20,1)) # saves the indexes of the feature that we removed so we can remove it on Xtest
+reg=LinearRegression() # MSE value from Linear Regression without Feature Selection
+k = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+best_mse=abs(np.average(cross_val_score(reg, xtrain, np.ravel(ytrain), scoring="neg_mean_squared_error", cv=k)))
+n=0
+b=0
+while b<len(xtrain[0]):
+    temp=xtrain[:,b] # current feature
+    xtrain_temp=np.delete(xtrain, b , axis=1) # remove current feature from xtrain
+    mse=abs(np.average(cross_val_score(reg, xtrain_temp, np.ravel(ytrain), scoring="neg_mean_squared_error", cv=k)))
+    # checks if feature removal results in a lower MSE
+    if mse<best_mse:
+        # removes the feature, saves the currently best MSE from CV, saves the index of the feature
+        xtrain=xtrain_temp
+        best_mse=mse
+        index_saver[n]=n+b
+        n=n+1
+    else:
+        # reverts the feature back to xtrain in case it doesn't improve MSE
+        xtrain=np.insert(xtrain_temp, b, temp, axis=1)
+        b=b+1
+
 '''Validation of the predictor'''
 # for loop to find the best alpha for LASSO/Ridge Regression
 error=100
 best_alpha=0
 error1=100
 best_alpha1=0
+
 for i in range(100, 1, -1):
     las=Lasso(alpha=i/1000)
     lasscore=cross_val_score(las, xtrain, np.ravel(ytrain), scoring="neg_mean_squared_error", cv=10)
@@ -147,13 +170,13 @@ mse_gb=abs(np.average(gbscore))
 mse_quantile=abs(np.average(quantilescore))   
 mse_random=abs(np.average(randomscore))
 
-print('mean MSE Linear:%.4f' % mse_reg)
+print('mean MSE Linear:%.5f' % mse_reg)
 print('mean MSE Polynomial:%.4f' % mse_poli)
-print('mean MSE LASSO:%.4f, with alpha=%.4f' % (mse_las, best_alpha))
-print('mean MSE Ridge:%.4f, with alpha=%.4f' % (mse_ridge, best_alpha1))
-print('mean MSE Huber:%.4f' % mse_huber)
-print('mean MSE RANSAC:%.4f' % mse_ransac)
-print('mean MSE Theilsen:%.4f' % mse_theilsen)
+print('mean MSE LASSO:%.5f, with alpha=%.4f' % (mse_las, best_alpha))
+print('mean MSE Ridge:%.5f, with alpha=%.4f' % (mse_ridge, best_alpha1))
+print('mean MSE Huber:%.5f' % mse_huber)
+print('mean MSE RANSAC:%.5f' % mse_ransac)
+print('mean MSE Theilsen:%.5f' % mse_theilsen)
 print('mean MSE Random Forest:%.4f' % mse_random)
 print('mean MSE SGD:%.4f' % mse_sgd)
 print('mean MSE GB:%.4f' % mse_gb)
@@ -168,7 +191,8 @@ print(mse)
 '''Load Xtest, fit the model using the whole training set, predict y outcomes and save to a .npy file'''
 
 xtest=np.load('Xtest_Regression_Part2.npy') # loads the independent test set
-theilsen.fit(xtrain,np.ravel(ytrain)) # trains the linear model with the given training set
+xtest=np.delete(xtest, [3, 7, 9, 10, 12], axis=1) # removes the insignificant features found on index_saver
+theilsen.fit(xtrain,np.ravel(ytrain)) # trains the model with the given training set
 y_predicted=theilsen.predict(xtest) # evaluation of the predictor using the independent test set (corresponding outcomes for professor)
 np.save('Ypredict_Regression_Part2.npy',y_predicted) # saves the predicted y^ values into a .npy file
 
